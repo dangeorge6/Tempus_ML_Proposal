@@ -18,7 +18,7 @@ Architecture proposal for a self-service bioinformatics machine learning platfor
 
 - Illumina machines are not capable of streaming. Lab techs archive output files and can upload this archive. If streaming were possible, I may have altered the sequencing pipeline, front-loading the secondary analysis workflow with a kinesis streaming queue to speed up processing.
 
-![Data Lake & ML Infrastructure Proposal](tempus_proposal.pdf)
+![Data Lake & ML Infrastructure Proposal](tempus_proposal.png)
 
 ### Tempus Data Lake, Data Cataloging & ETL
 
@@ -75,7 +75,7 @@ docker run -ti --name koalas_demo tempus/koalas_demo:1.0
 
 Per my diagram, I imagine the Tempus app sits on RDS (postgres or mysql) downstream of the data lake. I took a little time at the beginning of this exercise to set down a normalized, relational schema for Tempus' physician-facing app to better understand the product. Having no access to the actual product, I gleaned most of this from screen captures in Tempus promotional videos. This is by no means complete, just a basic scaffold to help put my thoughts together for the challenge. 
 
-![Tempus App Schema](tempus_app_rdbms.pdf)
+![Tempus App Schema](tempus_app_rdbms.png)
 
 The web frontend is a React app served via a Cloudfront CDN distribution. Mobile apps are served from their respective app stores. The backend is a REST api, containerized and deployed as a pod on Kubernetes. K8s takes care of horizontally auto scaling based on incoming traffic. 
 
