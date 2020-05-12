@@ -18,7 +18,7 @@ Architecture proposal for a self-service bioinformatics machine learning platfor
 
 - Illumina machines are not capable of streaming. Lab techs archive output files and can upload this archive. If streaming were possible, I may have altered the sequencing pipeline, front-loading the secondary analysis workflow with a kinesis streaming queue to speed up processing.
 
-![Data Lake & ML Infrastructure Proposal](tempus_proposal.jpg)
+![Data Lake & ML Infrastructure Proposal](tempus_ml_proposal.jpg)
 
 ### Tempus Data Lake, Data Cataloging & ETL
 
