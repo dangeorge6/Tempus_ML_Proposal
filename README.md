@@ -42,6 +42,7 @@ Smart partitioning of data in this lake will aid in performance and requires mor
 
 Data scientists in need of speedy sequence analysis may also drop fastq files in the raw bucket in the same way a lab tech would. However, they may also include a manifest file describing alternate parameters for mapping and alignment (i.e., use of different well known algorithms) as well as alternate reference genomes to use. The same lambda function described will pass these params to the Glue workflow. Glue will deliver the resulting files from these data science requested jobs to a special `/experimental` prefix in the Staged bucket.
 
+The infrastructure described will be codified via Terraform and versioned in git so modifications can be tracked.
 
 ### Machine Learning Infrastructure w/Sagemaker	
 
@@ -51,7 +52,20 @@ First, which platform to choose? I looked at H20 and Sagemaker. H20 has some rea
 
 For the model build/exploratory phase, I have Tempus and partner data scientists tapping into Sagemaker Build launching notebooks and choosing between pyspark, vanilla python or R. Pyspark notebooks can leverage a Spark/EMR cluster provisioned for the ML team sitting on the data lake. Alternatively, data scientists can use an aws library like boto to grab data lake data via SQL through Athena. EC2 instances with these exploratory notebooks will persist in the Sagemaker console for sharing and auditability.
 
-Once a training set and 
+Once a training set is decided upon for a given model, the data scientist would then copy the set to the MLArtifacts bucket at the `training-sets` prefix. Versioning would be turned on for this bucket so the state of a given set at any given time can be tracked as additions or removals from the set are made. Next, a git repo for that model would be created with the following files at the root:
+
+```
+1. manifest.json - contains a version number that the CI will autoincrement with each build. Also general meta data about the project
+
+2. config.json - ML configuration needed for Sagemaker Train (framework, algo, hyperparams, data_set_location, # nodes to train on, etc)
+
+3. .circleci - CircleCI file for CI build pipeline
+
+```
+
+Upon commit, CircleCI (or Jenkins or CodePipeline) will increment the manifest.json version number and dispatch to Sagemaker Train, passing params from config.json. By default, CircleCI will tell Sagemaker to store model weights in `s3://ModelArtifacts/model-outputs` with the version number prepended to the filename. In this way, both the final model weights and the training sets used can be traced to the specific commit (i.e., training) in git. Other important artifacts like model performance against its test set will be sent to the ModelArtifacts bucket for evaluation before a deployment decision.
+
+Two additional parameterized CircleCI jobs will be triggered to complete the lifecycle and take models to production. Calling the `deploy_candidate` job with the model name and version number will have Circle delegate to Sagemaker Deploy to launch the model as a REST endpoint behind API Gateway with a private endpoint url. The new model is then staged for testing. Once the team is satisfied with the new model, a subsequent `promote_candidate` job can be called with the model name and version number to tear down the existing production model and replace it with the new model. At past jobs, I've had good success with "ChatOps", making CI jobs like this callable via Slack in a "Deployments" channel that interested parties can watch. This creates a nice little log of the most recent deployments and is a big help in troubleshooting prod issues.
 
 
 ### Dask vs Koalas
@@ -62,17 +76,17 @@ To take things to the next level, I'd recommend experimenting with Databrick's k
 
 ### Running the koalas demo
 
-I've included a mini demo script running pandas alongside koalas. Koalas has the very same apis for importing and manipulating dataframes as pandas but instead sits atop Spark dataframes and can leverage the speed of distributed computing. The project runs on pySpark in a docker container.
+I've included a mini demo script I put together running pandas alongside koalas. Koalas has the very same apis for importing and manipulating dataframes as pandas but instead sits atop Spark dataframes and can leverage the speed of distributed computing. The project runs on pySpark in a docker container.
 
 Ensure you have docker installed on your machine.
 
 ```
-docker build -t tempus/koalas_demo:1.0 .
-docker run -ti --name koalas_demo tempus/koalas_demo:1.0
+docker build -t tempus_proj/koalas_demo:1.0 .
+docker run -ti --name koalas_demo tempus_proj/koalas_demo:1.0
 ```
 
 ### Tempus App, Operational Data Stores 
-
+	
 Per my diagram, I imagine the Tempus app sits on RDS (postgres or mysql) downstream of the data lake. I took a little time at the beginning of this exercise to set down a normalized, relational schema for Tempus' physician-facing app to better understand the product. Having no access to the actual product, I gleaned most of this from screen captures in Tempus promotional videos. This is by no means complete, just a basic scaffold to help put my thoughts together for the challenge. 
 
 ![Tempus App Schema](tempus_app_rdbms.jpg)
