@@ -8,7 +8,7 @@ Architecture proposal for a self-service bioinformatics machine learning platfor
 
 ![Basic Sequencing Pipeline](seq_pipeline.png)
 
--Processing sequencing data requires a computationally expensive set of steps called "secondary analysis" which align and map raw fastq files to a reference genome to produce a BAM file. BAM is a compressed, binary file representing the pieced-together sequenced genome. Next, a variant call file is produced (VCF) that represents all the genetic mutations -- Single Nucleotide Polymorphisms (SNPs), nucleotide insertions or deletions (indels). Finally, the mutations in the VCF file are cross referenced with third party databases to annotate the VCF with clinical/diagnostic information regarding the mutations (ternary analysis). 
+- Processing sequencing data requires a computationally expensive set of steps called "secondary analysis" which align and map raw fastq files to a reference genome to produce a BAM file. BAM is a compressed, binary file representing the pieced-together sequenced genome. Next, a variant call file is produced (VCF) that represents all the genetic mutations -- Single Nucleotide Polymorphisms (SNPs), nucleotide insertions or deletions (indels). Finally, the mutations in the VCF file are cross referenced with third party databases to annotate the VCF with clinical/diagnostic information regarding the mutations (ternary analysis). 
 
 - For business or financial reasons, Tempus would like to perform it's own secondary and ternary analysis on patient sequences rather than outsourcing to third party platforms like illumina BaseSpace Hub.
 
@@ -54,18 +54,15 @@ For the model build/exploratory phase, I have Tempus and partner data scientists
 
 Once a training set is decided upon for a given model, the data scientist would then copy the set to the MLArtifacts bucket at the `training-sets` prefix. Versioning would be turned on for this bucket so the state of a given set at any given time can be tracked as additions or removals from the set are made. Next, a git repo for that model would be created with the following files at the root:
 
-```
 1. manifest.json - contains a version number that the CI will autoincrement with each build. Also general meta data about the project
 
 2. config.json - ML configuration needed for Sagemaker Train (framework, algo, hyperparams, data_set_location, # nodes to train on, etc)
 
 3. .circleci - CircleCI file for CI build pipeline
 
-```
-
 Upon commit, CircleCI (or Jenkins or CodePipeline) will increment the manifest.json version number and dispatch to Sagemaker Train, passing params from config.json. By default, CircleCI will tell Sagemaker to store model weights in `s3://ModelArtifacts/model-outputs` with the version number prepended to the filename. In this way, both the final model weights and the training sets used can be traced to the specific commit (i.e., training) in git. Other important artifacts like model performance against its test set will be sent to the ModelArtifacts bucket for evaluation before a deployment decision.
 
-Two additional parameterized CircleCI jobs will be triggered to complete the lifecycle and take models to production. Calling the `deploy_candidate` job with the model name and version number will have Circle delegate to Sagemaker Deploy to launch the model as a REST endpoint behind API Gateway with a private endpoint url. The new model is then staged for testing. Once the team is satisfied with the new model, a subsequent `promote_candidate` job can be called with the model name and version number to tear down the existing production model and replace it with the new model. At past jobs, I've had good success with "ChatOps", making CI jobs like this callable via Slack in a "Deployments" channel that interested parties can watch. This creates a nice little log of the most recent deployments and is a big help in troubleshooting prod issues.
+Two additional parameterized CircleCI jobs will be triggered to complete the lifecycle and take models to production. Calling the `deploy_candidate` job with the model name and version number will have Circle delegate to Sagemaker Deploy to launch the model as a REST endpoint behind API Gateway with a private endpoint url. The new model is then staged for testing. Once the team is satisfied with the new model, a subsequent `promote_candidate` job can be called with the model name and version number to tear down the existing production model and replace it with the new model. At past jobs, I've had good success with "ChatOps", making CI jobs like this callable via Slack in a "#Deployments" channel that interested parties can watch. This creates a nice little log of the most recent deployments and is a big help in troubleshooting prod issues.
 
 
 ### Dask vs Koalas
