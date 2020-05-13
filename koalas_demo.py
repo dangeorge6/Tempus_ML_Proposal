@@ -2,6 +2,7 @@ import pandas as pd
 from databricks import koalas as ks
 from pyspark.sql import SparkSession
 from pyspark import SparkContext
+import time
 import logging
 
 #hush Spark chatter
@@ -11,26 +12,26 @@ logger.LogManager.getLogger("akka").setLevel( logger.Level.ERROR )
 
 print("Starting Script")
 
+start_time = time.time()
+path_to_file = '/usr/local/bin/breast_cancer_data.csv'
 # Pandas
-df = pd.DataFrame({'a': [1, 2], 'b': [3, 4], 'c': [5, 6]})
+df = pd.read_csv(path_to_file)  
+# perform expensive operations
+df = df.sample(frac=1)
 
-# Rename columns
-df.columns = ['a', 'b', 'c1']
-
-# Do some operations in place
-df['a2'] = df.a * df.a
-
+execution_time = time.time() - start_time
 print("Dataframe with Pandas:")
 print(df)
+print(f"Execution time was: {execution_time}")
 
-
+start_time = time.time()
 # Koalas on top of Spark df
-df = ks.DataFrame({'a': [1, 2], 'b': [3, 4], 'c': [5, 6]})
-
-df.columns = ['a', 'b', 'c1']
-df['a2'] = df.a * df.a
+df = ks.read_csv(path_to_file)  
+# perform expensive operations
+df = df.sample(frac=float(1))
 
 print("Spark Dataframe with Koalas:")
 print(df)
+print(f"Execution time was: {execution_time}")
 
 print("Exiting Script")
